@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#176b58">
+<meta name="description" content="Gestion des achats, fabrications, ventes et bénéfices de l’atelier DNC.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<title>DNC — Gestion de fabrication</title>
+<style>
+:root{--green:#176b58;--green2:#e4f3ed;--ink:#172b26;--muted:#64736e;--line:#dce7e2;--bg:#f4f8f6;--white:#fff;--red:#b42318;--orange:#a85d00}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px}
+header{background:var(--green);color:white;padding:22px 17px 18px;border-radius:0 0 22px 22px}
+.brand{font-size:12px;letter-spacing:1.5px;opacity:.85;font-weight:700}.headrow{display:flex;justify-content:space-between;align-items:center;gap:10px}h1{font-size:23px;margin:6px 0 3px}header p{margin:0;opacity:.85;font-size:13px}
+main{max-width:760px;margin:auto;padding:14px 13px 100px}.tabs{display:flex;gap:7px;overflow:auto;padding:4px 0 13px;position:sticky;top:0;background:var(--bg);z-index:5}
+.tab{border:1px solid var(--line);background:white;color:var(--ink);border-radius:999px;padding:10px 13px;white-space:nowrap;font-weight:650;font-size:13px}.tab.active{background:var(--green);color:white;border-color:var(--green)}
+.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric,.card{background:white;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 2px 8px #143b2b08}.metric small{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:20px;margin-top:5px;overflow-wrap:anywhere}.metric em{font-size:11px;color:var(--muted);font-style:normal}
+h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{color:var(--muted);font-size:12px;line-height:1.5}.stack{display:grid;gap:10px}.field{display:grid;gap:5px;margin-bottom:11px}.field label{font-size:12px;font-weight:700;color:#40534c}.field input,.field select,.field textarea{width:100%;border:1px solid #cddbd4;border-radius:10px;padding:11px 10px;background:white;color:var(--ink);font:inherit;min-width:0}.field textarea{min-height:65px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.btn{border:0;border-radius:11px;padding:12px 14px;font:inherit;font-weight:750;background:var(--green);color:white;width:100%;cursor:pointer}.btn.secondary{background:var(--green2);color:var(--green)}.btn.danger{background:#fff0ef;color:var(--red)}.btn.small{width:auto;padding:7px 10px;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{background:#fff8e9;border:1px solid #f0dfb5;border-radius:12px;padding:11px 12px;font-size:12px;color:#684b1b;line-height:1.5}.success{color:var(--green)}.negative{color:var(--red)}.item{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:11px 0}.item:last-child{border-bottom:0}.item b{display:block;font-size:14px}.item small{display:block;color:var(--muted);font-size:12px;margin-top:3px}.item .amount{font-weight:800;text-align:right;white-space:nowrap}.empty{padding:18px 8px;text-align:center;color:var(--muted);font-size:13px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--green2);color:var(--green);font-size:11px;font-weight:750}.bottom{position:fixed;bottom:0;left:0;right:0;background:#ffffffed;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:center;backdrop-filter:blur(8px)}.bottom-inner{width:100%;max-width:730px;display:flex;gap:10px}.bottom .btn{flex:1}.divider{height:1px;background:var(--line);margin:13px 0}.right{float:right}.muted{color:var(--muted)}.costline{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:13px}.costline.total{border-top:1px solid var(--line);margin-top:4px;padding-top:11px;font-weight:800;font-size:15px}
+@media(min-width:600px){main{padding:20px 20px 110px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.metric strong{font-size:19px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="headrow"><div><div class="brand">DNC · ATELIER</div><h1>Gestion de fabrication</h1><p>Achats · Production · Ventes · Bénéfices</p></div><div style="font-size:34px">🧵</div></div>
+</header>
+<main>
+<nav class="tabs" aria-label="Sections">
+<button class="tab active" data-page="dashboard">Tableau de bord</button>
+<button class="tab" data-page="achats">Achats</button>
+<button class="tab" data-page="production">Fabrication</button>
+<button class="tab" data-page="ventes">Ventes</button>
+<button class="tab" data-page="historique">Historique</button>
+<button class="tab" data-page="reglages">Réglages</button>
+</nav>
+<section class="page active" id="dashboard">
+<div class="grid">
+<div class="metric"><small>Chiffre d'affaires</small><strong id="mRevenue">0 Ar</strong><em>Ventes enregistrées</em></div>
+<div class="metric"><small>Bénéfice estimé</small><strong id="mProfit">0 Ar</strong><em>Sur produits vendus</em></div>
+<div class="metric"><small>Pièces en stock</small><strong id="mStock">0</strong><em>Produites moins vendues</em></div>
+<div class="metric"><small>Trésorerie estimée</small><strong id="mCash">100 000 Ar</strong><em>Budget + encaissements − achats</em></div>
+</div>
+<h2>Résumé de l'atelier</h2>
+<div class="card">
+<div class="costline"><span>Pièces confectionnées</span><b id="mMade">0</b></div>
+<div class="costline"><span>Pièces vendues</span><b id="mSold">0</b></div>
+<div class="costline"><span>Coût moyen par pièce fabriquée</span><b id="mUnitCost">0 Ar</b></div>
+<div class="costline"><span>Valeur des achats enregistrés</span><b id="mPurchases">0 Ar</b></div>
+<div class="costline"><span>Autres dépenses</span><b id="mExpenses">0 Ar</b></div>
+</div>
+<h2>Commencer rapidement</h2>
+<div class="stack">
+<button class="btn" onclick="showPage('achats')">＋ Enregistrer un achat de matière</button>
+<button class="btn secondary" onclick="showPage('production')">＋ Enregistrer une fabrication</button>
+<button class="btn secondary" onclick="showPage('ventes')">＋ Enregistrer une vente</button>
+</div>
+<div class="notice" style="margin-top:13px">Important : le bénéfice est calculé sur le coût de fabrication des pièces effectivement vendues. La trésorerie est une estimation simple. Enregistre chaque achat et chaque vente pour garder les chiffres à jour.</div>
+</section>
+<section class="page" id="achats">
+<h2>Enregistrer un achat</h2>
+<div class="card">
+<form id="purchaseForm">
+<div class="field"><label for="pName">Matière ou dépense</label><input id="pName" required placeholder="Ex. tissu éponge, fil, emballage"></div>
+<div class="formgrid">
+<div class="field"><label for="pQty">Quantité achetée</label><input id="pQty" type="number" min="0.01" step="any" value="1" required></div>
+<div class="field"><label for="pUnit">Unité</label><select id="pUnit"><option>mètre</option><option>pièce</option><option>rouleau</option><option>lot</option><option>kg</option><option>autre</option></select></div>
+<div class="field"><label for="pTotal">Montant total (Ar)</label><input id="pTotal" type="number" min="0" step="1" required placeholder="Ex. 20000"></div>
+<div class="field"><label for="pDate">Date</label><input id="pDate" type="date" required></div>
+</div>
+<div class="field"><label for="pNote">Note (facultatif)</label><input id="pNote" placeholder="Fournisseur, couleur, etc."></div>
+<button class="btn" type="submit">Enregistrer l'achat</button>
+</form>
+</div>
+<h2>Achats enregistrés</h2><div class="card" id="purchaseList"></div>
+</section>
+<section class="page" id="production">
+<h2>Enregistrer une fabrication</h2>
+<div class="card">
+<form id="productionForm">
+<div class="field"><label for="prodName">Produit fabriqué</label><input id="prodName" value="Essuie-mains DNC" required></div>
+<div class="formgrid">
+<div class="field"><label for="prodQty">Nombre de pièces bonnes</label><input id="prodQty" type="number" min="1" step="1" value="16" required></div>
+<div class="field"><label for="prodDate">Date</label><input id="prodDate" type="date" required></div>
+<div class="field"><label for="prodMaterials">Matières utilisées (Ar)</label><input id="prodMaterials" type="number" min="0" step="1" value="48000" required></div>
+<div class="field"><label for="prodLabor">Main-d'œuvre totale (Ar)</label><input id="prodLabor" type="number" min="0" step="1" value="11200" required></div>
+<div class="field"><label for="prodOther">Autres coûts de fabrication (Ar)</label><input id="prodOther" type="number" min="0" step="1" value="0" required></div>
+</div>
+<div class="notice">Indique uniquement le coût des matières réellement utilisées dans ce lot, pas tout le stock acheté. Exemple : pour 16 pièces, si les matières utilisées valent 48 000 Ar et la main-d'œuvre 11 200 Ar, le coût total est 59 200 Ar.</div>
+<div class="divider"></div>
+<div class="costline"><span>Coût total du lot</span><b id="liveBatchCost">59 200 Ar</b></div>
+<div class="costline"><span>Coût par pièce</span><b id="liveUnitCost">3 700 Ar</b></div>
+<button class="btn" type="submit">Enregistrer la fabrication</button>
+</form>
+</div>
+<h2>Fabrications enregistrées</h2><div class="card" id="productionList"></div>
+</section>
+<section class="page" id="ventes">
+<h2>Enregistrer une vente</h2>
+<div class="card">
+<form id="saleForm">
+<div class="field"><label for="sProduct">Produit vendu</label><input id="sProduct" value="Essuie-mains DNC" required></div>
+<div class="formgrid">
+<div class="field"><label for="sQty">Quantité vendue</label><input id="sQty" type="number" min="1" step="1" value="1" required></div>
+<div class="field"><label for="sPrice">Prix par pièce (Ar)</label><input id="sPrice" type="number" min="0" step="1" value="7000" required></div>
+<div class="field"><label for="sDate">Date</label><input id="sDate" type="date" required></div>
+<div class="field"><label for="sExpense">Frais liés à cette vente (Ar)</label><input id="sExpense" type="number" min="0" step="1" value="0" required></div>
+</div>
+<div class="costline"><span>Recette totale</span><b id="liveSaleRevenue">7 000 Ar</b></div>
+<button class="btn" type="submit">Enregistrer la vente</button>
+</form>
+</div>
+<h2>Ventes enregistrées</h2><div class="card" id="saleList"></div>
+</section>
+<section class="page" id="historique">
+<h2>Historique et sauvegarde</h2>
+<div class="card"><div class="sub">Les données restent dans le stockage local de ce navigateur. Exporte régulièrement une sauvegarde pour éviter de perdre tes chiffres si tu changes de téléphone ou de navigateur.</div>
+<div class="actions" style="margin-top:12px"><button class="btn small" id="exportBtn">Exporter une sauvegarde</button><label class="btn small secondary" for="importFile" style="display:inline-flex;align-items:center">Importer une sauvegarde</label><input type="file" id="importFile" accept="application/json" style="display:none"></div>
+</div>
+<h2>Dernières opérations</h2><div class="card" id="allHistory"></div>
+<div class="notice" style="margin-top:12px">Conseil : garde aussi une copie de ta sauvegarde dans un endroit sûr. Si tu effaces les données du navigateur, les opérations peuvent être supprimées.</div>
+</section>
+<section class="page" id="reglages">
+<h2>Réglages de DNC</h2>
+<div class="card">
+<form id="settingsForm">
+<div class="field"><label for="budget">Budget de départ (Ar)</label><input id="budget" type="number" min="0" step="1" value="100000" required></div>
+<div class="field"><label for="defaultPrice">Prix de vente habituel par pièce (Ar)</label><input id="defaultPrice" type="number" min="0" step="1" value="7000" required></div>
+<button class="btn" type="submit">Enregistrer les réglages</button>
+</form>
+<div class="divider"></div><button class="btn danger" id="resetBtn">Effacer toutes les données</button>
+<p class="sub">Cette action est définitive. Exporte d'abord une sauvegarde si tu souhaites conserver tes opérations.</p>
+</div>
+</section>
+</main>
+<div class="bottom"><div class="bottom-inner"><button class="btn secondary" onclick="showPage('achats')">＋ Achat</button><button class="btn" onclick="showPage('production')">＋ Fabrication</button><button class="btn secondary" onclick="showPage('ventes')">＋ Vente</button></div></div>
+<script>
+const KEY='dnc_gestion_v1';
+const today=()=>new Date().toISOString().slice(0,10);
+const blank=()=>({budget:100000,defaultPrice:7000,purchases:[],productions:[],sales:[]});
+let db=load();
+function load(){try{return {...blank(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return blank()}}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function money(n){return Math.round(Number(n)||0).toLocaleString('fr-FR')+' Ar'}
+function num(id){return Number(document.getElementById(id).value)||0}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showPage(name){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===name));window.scrollTo({top:0,behavior:'smooth'})}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+['pDate','prodDate','sDate'].forEach(id=>document.getElementById(id).value=today());
+function totalCost(p){return (Number(p.materials)||0)+(Number(p.labor)||0)+(Number(p.other)||0)}
+function totals(){
+ const made=db.productions.reduce((s,p)=>s+p.qty,0), sold=db.sales.reduce((s,p)=>s+p.qty,0);
+ const productionCost=db.productions.reduce((s,p)=>s+totalCost(p),0);
+ const avgCost=made?productionCost/made:0;
+ const revenue=db.sales.reduce((s,p)=>s+p.qty*p.price,0);
+ const costSold=Math.min(sold,made)*avgCost;
+ const saleExpenses=db.sales.reduce((s,p)=>s+(p.expense||0),0);
+ const purchases=db.purchases.reduce((s,p)=>s+p.total,0);
+ const otherExpenses=db.purchases.filter(p=>p.category==='expense').reduce((s,p)=>s+p.total,0);
+ const profit=revenue-costSold-saleExpenses;
+ const cash=db.budget+revenue-purchases-saleExpenses;
+ return {made,sold,stock:Math.max(0,made-sold),productionCost,avgCost,revenue,costSold,profit,purchases,expenses:otherExpenses+saleExpenses,cash}
+}
+function render(){
+ const t=totals();
+ const set=(id,v)=>document.getElementById(id).textContent=v;
+ set('mRevenue',money(t.revenue));set('mProfit',money(t.profit));set('mStock',t.stock);set('mCash',money(t.cash));set('mMade',t.made);set('mSold',t.sold);set('mUnitCost',money(t.avgCost));set('mPurchases',money(t.purchases));set('mExpenses',money(t.expenses));
+ document.getElementById('mProfit').className=t.profit<0?'negative':'success';
+ const list=(items,fn,empty)=>items.length?items.slice().reverse().map(fn).join(''):`<div class="empty">${empty}</div>`;
+ document.getElementById('purchaseList').innerHTML=list(db.purchases,p=>`<div class="item"><div><b>${esc(p.name)}</b><small>${esc(p.qty)} ${esc(p.unit)} · ${esc(p.date)}${p.note?' · '+esc(p.note):''}</small></div><div class="amount">${money(p.total)}<br><button class="btn small danger" onclick="delItem('purchases','${p.id}')">Supprimer</button></div></div>`,'Aucun achat enregistré.');
+ document.getElementById('productionList').innerHTML=list(db.productions,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièces</b><small>${esc(p.date)} · matières ${money(p.materials)} · main-d'œuvre ${money(p.labor)} · autres ${money(p.other)}</small><small>Coût par pièce : ${money(totalCost(p)/p.qty)}</small></div><div class="amount">${money(totalCost(p))}<br><button class="btn small danger" onclick="delItem('productions','${p.id}')">Supprimer</button></div></div>`,'Aucune fabrication enregistrée.');
+ document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
+ const hist=[...db.purchases.map(x=>({...x,type:'Achat',amount:-x.total})),...db.productions.map(x=>({...x,type:'Fabrication',amount:-totalCost(x)})),...db.sales.map(x=>({...x,type:'Vente',amount:x.qty*x.price}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+ document.getElementById('allHistory').innerHTML=list(hist.slice(0,40),x=>`<div class="item"><div><b>${x.type} · ${esc(x.name)}</b><small>${esc(x.date)}</small></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`,'Les opérations apparaîtront ici.');
+ document.getElementById('budget').value=db.budget;document.getElementById('defaultPrice').value=db.defaultPrice;
+}
+function delItem(group,id){if(confirm('Supprimer cette opération ?')){db[group]=db[group].filter(x=>x.id!==id);save()}}
+function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+document.getElementById('purchaseForm').addEventListener('submit',e=>{e.preventDefault();db.purchases.push({id:id(),name:document.getElementById('pName').value.trim(),qty:num('pQty'),unit:document.getElementById('pUnit').value,total:num('pTotal'),date:document.getElementById('pDate').value,note:document.getElementById('pNote').value.trim()});e.target.reset();document.getElementById('pQty').value=1;document.getElementById('pDate').value=today();save();showPage('achats')});
+function updateBatch(){const c=num('prodMaterials')+num('prodLabor')+num('prodOther'),q=Math.max(1,num('prodQty'));document.getElementById('liveBatchCost').textContent=money(c);document.getElementById('liveUnitCost').textContent=money(c/q)}
+['prodQty','prodMaterials','prodLabor','prodOther'].forEach(id=>document.getElementById(id).addEventListener('input',updateBatch));
+document.getElementById('productionForm').addEventListener('submit',e=>{e.preventDefault();db.productions.push({id:id(),name:document.getElementById('prodName').value.trim(),qty:num('prodQty'),date:document.getElementById('prodDate').value,materials:num('prodMaterials'),labor:num('prodLabor'),other:num('prodOther')});save();showPage('production')});
+function updateSale(){document.getElementById('liveSaleRevenue').textContent=money(num('sQty')*num('sPrice'))}
+['sQty','sPrice'].forEach(id=>document.getElementById(id).addEventListener('input',updateSale));
+document.getElementById('saleForm').addEventListener('submit',e=>{e.preventDefault();const sold=db.sales.reduce((s,p)=>s+p.qty,0),made=db.productions.reduce((s,p)=>s+p.qty,0);if(num('sQty')>made-sold){if(!confirm('La quantité vendue dépasse le stock calculé. Enregistrer quand même ?'))return}db.sales.push({id:id(),name:document.getElementById('sProduct').value.trim(),qty:num('sQty'),price:num('sPrice'),date:document.getElementById('sDate').value,expense:num('sExpense')});save();showPage('ventes')});
+document.getElementById('settingsForm').addEventListener('submit',e=>{e.preventDefault();db.budget=num('budget');db.defaultPrice=num('defaultPrice');document.getElementById('sPrice').value=db.defaultPrice;save();alert('Réglages enregistrés.')});
+document.getElementById('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sauvegarde-DNC-'+today()+'.json';a.click();URL.revokeObjectURL(url)});
+document.getElementById('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const imported=JSON.parse(await f.text());if(!imported||!Array.isArray(imported.purchases)||!Array.isArray(imported.productions)||!Array.isArray(imported.sales))throw Error('invalid');if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){db={...blank(),...imported};save();alert('Sauvegarde importée.')}}catch(err){alert('Fichier de sauvegarde invalide.')}e.target.value=''});
+document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Effacer définitivement toutes les données de DNC ?')){db=blank();save();alert('Les données ont été effacées.')}});
+document.getElementById('sPrice').value=db.defaultPrice;
+render();updateBatch();updateSale();
+</script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
+</body>
+</html>

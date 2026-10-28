@@ -1,0 +1,17 @@
+DNC – GESTION DE FABRICATION (version installable PWA)
+
+CONTENU
+- index.html : application DNC
+- manifest.webmanifest : informations d'installation et icônes
+- sw.js : mise en cache pour l'utilisation hors connexion après le premier chargement
+- icon-192.png et icon-512.png : icônes de l'application
+
+IMPORTANT
+Ce paquet prépare une application web installable (PWA), pas un fichier APK natif.
+Pour l'installer sur Android, il faut d'abord publier ces fichiers sur une adresse HTTPS. Une fois le site publié, ouvrez son adresse dans Google Chrome sur le téléphone, puis choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil ».
+
+HÉBERGEMENT GRATUIT POSSIBLE
+GitHub Pages est une option gratuite, mais il faut créer un compte GitHub et publier les fichiers du dossier sur un dépôt public activé pour GitHub Pages. Le site doit être accessible en HTTPS pour permettre l'installation et le mode hors connexion.
+
+DONNÉES ET SAUVEGARDE
+Les données de gestion sont enregistrées localement dans le navigateur/appareil. Elles ne sont pas automatiquement synchronisées avec un autre téléphone. Utilisez régulièrement « Exporter une sauvegarde » dans l'application et conservez le fichier JSON en lieu sûr.

@@ -1,0 +1,16 @@
+{
+  "name": "DNC – Gestion de fabrication",
+  "short_name": "DNC Gestion",
+  "description": "Achats, fabrication, ventes, stock et bénéfices de l'atelier DNC.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f8f6",
+  "theme_color": "#176b58",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
