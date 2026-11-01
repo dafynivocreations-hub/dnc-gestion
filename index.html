@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#176b58">
-<meta name="description" content="Gestion des achats, fabrications, ventes et bénéfices de l’atelier DNC.">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
 <title>DNC — Gestion de fabrication</title>
 <style>
 :root{--green:#176b58;--green2:#e4f3ed;--ink:#172b26;--muted:#64736e;--line:#dce7e2;--bg:#f4f8f6;--white:#fff;--red:#b42318;--orange:#a85d00}
@@ -39,6 +36,27 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <div class="metric"><small>Bénéfice estimé</small><strong id="mProfit">0 Ar</strong><em>Sur produits vendus</em></div>
 <div class="metric"><small>Pièces en stock</small><strong id="mStock">0</strong><em>Produites moins vendues</em></div>
 <div class="metric"><small>Trésorerie estimée</small><strong id="mCash">100 000 Ar</strong><em>Budget + encaissements − achats</em></div>
+</div>
+<h2>Bilan quotidien</h2>
+<div class="card">
+  <div class="field">
+    <label for="reportDate">Choisir la date du bilan</label>
+    <input id="reportDate" type="date">
+  </div>
+  <div class="grid">
+    <div class="metric"><small>Ventes du jour</small><strong id="dRevenue">0 Ar</strong><em id="dSalesCount">0 pièce vendue</em></div>
+    <div class="metric"><small>Bénéfice estimé du jour</small><strong id="dProfit">0 Ar</strong><em>Après coût des pièces vendues et frais de vente</em></div>
+    <div class="metric"><small>Achats / dépenses payés</small><strong id="dPurchases">0 Ar</strong><em>Sorties enregistrées aujourd'hui</em></div>
+    <div class="metric"><small>Fabrication du jour</small><strong id="dProductionCost">0 Ar</strong><em id="dMadeCount">0 pièce fabriquée</em></div>
+  </div>
+  <div class="divider"></div>
+  <div class="costline"><span>Encaissements des ventes</span><b id="dIncome">0 Ar</b></div>
+  <div class="costline"><span>Achats enregistrés</span><b id="dPurchaseOut">0 Ar</b></div>
+  <div class="costline"><span>Frais liés aux ventes</span><b id="dSaleOut">0 Ar</b></div>
+  <div class="costline total"><span>Mouvement net de trésorerie du jour*</span><b id="dCashFlow">0 Ar</b></div>
+  <div class="sub" style="margin-top:8px">*Calcul simplifié : ventes enregistrées − achats enregistrés − frais de vente. Le bénéfice estimé est calculé séparément pour éviter de compter deux fois les matières premières (achat puis utilisation en fabrication).</div>
+  <h3 style="margin-top:16px">Opérations de cette date</h3>
+  <div id="dailyOperations"></div>
 </div>
 <h2>Résumé de l'atelier</h2>
 <div class="card">
@@ -146,6 +164,8 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function showPage(name){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===name));window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
 ['pDate','prodDate','sDate'].forEach(id=>document.getElementById(id).value=today());
+document.getElementById('reportDate').value=today();
+document.getElementById('reportDate').addEventListener('change',renderDaily);
 function totalCost(p){return (Number(p.materials)||0)+(Number(p.labor)||0)+(Number(p.other)||0)}
 function totals(){
  const made=db.productions.reduce((s,p)=>s+p.qty,0), sold=db.sales.reduce((s,p)=>s+p.qty,0);
@@ -160,6 +180,43 @@ function totals(){
  const cash=db.budget+revenue-purchases-saleExpenses;
  return {made,sold,stock:Math.max(0,made-sold),productionCost,avgCost,revenue,costSold,profit,purchases,expenses:otherExpenses+saleExpenses,cash}
 }
+function dailyReport(){
+ const date=document.getElementById('reportDate')?.value||today();
+ const purchases=db.purchases.filter(x=>x.date===date);
+ const productions=db.productions.filter(x=>x.date===date);
+ const sales=db.sales.filter(x=>x.date===date);
+ const revenue=sales.reduce((s,x)=>s+(Number(x.qty)||0)*(Number(x.price)||0),0);
+ const saleExpenses=sales.reduce((s,x)=>s+(Number(x.expense)||0),0);
+ const purchaseOut=purchases.reduce((s,x)=>s+(Number(x.total)||0),0);
+ const productionCost=productions.reduce((s,x)=>s+totalCost(x),0);
+ const made=productions.reduce((s,x)=>s+(Number(x.qty)||0),0);
+ const sold=sales.reduce((s,x)=>s+(Number(x.qty)||0),0);
+ const allMade=db.productions.reduce((s,x)=>s+(Number(x.qty)||0),0);
+ const allCost=db.productions.reduce((s,x)=>s+totalCost(x),0);
+ const avgCost=allMade?allCost/allMade:0;
+ const profit=revenue-(sold*avgCost)-saleExpenses;
+ const cashFlow=revenue-purchaseOut-saleExpenses;
+ const operations=[
+  ...purchases.map(x=>({kind:'Achat',label:x.name,amount:-Number(x.total||0)})),
+  ...productions.map(x=>({kind:'Fabrication',label:x.name,amount:-totalCost(x)})),
+  ...sales.map(x=>({kind:'Vente',label:x.name+' ('+x.qty+' pièce(s))',amount:Number(x.qty||0)*Number(x.price||0)}))
+ ];
+ return {date,revenue,saleExpenses,purchaseOut,productionCost,made,sold,profit,cashFlow,operations};
+}
+function renderDaily(){
+ const d=dailyReport(),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+ set('dRevenue',money(d.revenue));set('dSalesCount',d.sold+' pièce(s) vendue(s)');
+ set('dProfit',money(d.profit));set('dPurchases',money(d.purchaseOut));
+ set('dProductionCost',money(d.productionCost));set('dMadeCount',d.made+' pièce(s) fabriquée(s)');
+ set('dIncome',money(d.revenue));set('dPurchaseOut',money(d.purchaseOut));
+ set('dSaleOut',money(d.saleExpenses));set('dCashFlow',money(d.cashFlow));
+ const cashEl=document.getElementById('dCashFlow');if(cashEl)cashEl.className=d.cashFlow<0?'negative':'success';
+ const profitEl=document.getElementById('dProfit');if(profitEl)profitEl.className=d.profit<0?'negative':'success';
+ const target=document.getElementById('dailyOperations');
+ if(target){
+  target.innerHTML=d.operations.length?d.operations.map(x=>`<div class="item"><div><b>${esc(x.kind)} · ${esc(x.label)}</b></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`).join(''):'<div class="empty">Aucune opération enregistrée pour cette date.</div>';
+ }
+}
 function render(){
  const t=totals();
  const set=(id,v)=>document.getElementById(id).textContent=v;
@@ -172,6 +229,7 @@ function render(){
  const hist=[...db.purchases.map(x=>({...x,type:'Achat',amount:-x.total})),...db.productions.map(x=>({...x,type:'Fabrication',amount:-totalCost(x)})),...db.sales.map(x=>({...x,type:'Vente',amount:x.qty*x.price}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
  document.getElementById('allHistory').innerHTML=list(hist.slice(0,40),x=>`<div class="item"><div><b>${x.type} · ${esc(x.name)}</b><small>${esc(x.date)}</small></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`,'Les opérations apparaîtront ici.');
  document.getElementById('budget').value=db.budget;document.getElementById('defaultPrice').value=db.defaultPrice;
+ renderDaily();
 }
 function delItem(group,id){if(confirm('Supprimer cette opération ?')){db[group]=db[group].filter(x=>x.id!==id);save()}}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -189,6 +247,5 @@ document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Ef
 document.getElementById('sPrice').value=db.defaultPrice;
 render();updateBatch();updateSale();
 </script>
-<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
 </body>
 </html>
