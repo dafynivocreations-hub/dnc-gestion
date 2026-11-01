@@ -58,6 +58,20 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
   <h3 style="margin-top:16px">Opérations de cette date</h3>
   <div id="dailyOperations"></div>
 </div>
+<h2>Bilan général · Depuis le début de DNC</h2>
+<div class="card">
+  <div class="grid">
+    <div class="metric"><small>Chiffre d'affaires cumulé</small><strong id="gRevenue">0 Ar</strong><em id="gSalesCount">0 pièce vendue</em></div>
+    <div class="metric"><small>Bénéfice estimé cumulé</small><strong id="gProfit">0 Ar</strong><em>Ventes − coût des pièces vendues − frais de vente</em></div>
+    <div class="metric"><small>Total des achats</small><strong id="gPurchases">0 Ar</strong><em>Depuis le début</em></div>
+    <div class="metric"><small>Coût total de fabrication</small><strong id="gProductionCost">0 Ar</strong><em id="gMadeCount">0 pièce fabriquée</em></div>
+  </div>
+  <div class="divider"></div>
+  <div class="costline"><span>Encaissements cumulés</span><b id="gIncome">0 Ar</b></div>
+  <div class="costline"><span>Frais de vente cumulés</span><b id="gSaleOut">0 Ar</b></div>
+  <div class="costline total"><span>Trésorerie estimée actuelle</span><b id="gCash">0 Ar</b></div>
+  <div class="sub" style="margin-top:8px">Ce bilan additionne toutes les opérations enregistrées, quelle que soit leur date. Il est calculé à partir des données conservées dans cette application.</div>
+</div>
 <h2>Résumé de l'atelier</h2>
 <div class="card">
 <div class="costline"><span>Pièces confectionnées</span><b id="mMade">0</b></div>
@@ -221,6 +235,8 @@ function render(){
  const t=totals();
  const set=(id,v)=>document.getElementById(id).textContent=v;
  set('mRevenue',money(t.revenue));set('mProfit',money(t.profit));set('mStock',t.stock);set('mCash',money(t.cash));set('mMade',t.made);set('mSold',t.sold);set('mUnitCost',money(t.avgCost));set('mPurchases',money(t.purchases));set('mExpenses',money(t.expenses));
+ set('gRevenue',money(t.revenue));set('gSalesCount',t.sold+' pièce(s) vendue(s)');set('gProfit',money(t.profit));set('gPurchases',money(t.purchases));set('gProductionCost',money(t.productionCost));set('gMadeCount',t.made+' pièce(s) fabriquée(s)');set('gIncome',money(t.revenue));set('gSaleOut',money(db.sales.reduce((s,x)=>s+(Number(x.expense)||0),0)));set('gCash',money(t.cash));
+ document.getElementById('gProfit').className=t.profit<0?'negative':'success';
  document.getElementById('mProfit').className=t.profit<0?'negative':'success';
  const list=(items,fn,empty)=>items.length?items.slice().reverse().map(fn).join(''):`<div class="empty">${empty}</div>`;
  document.getElementById('purchaseList').innerHTML=list(db.purchases,p=>`<div class="item"><div><b>${esc(p.name)}</b><small>${esc(p.qty)} ${esc(p.unit)} · ${esc(p.date)}${p.note?' · '+esc(p.note):''}</small></div><div class="amount">${money(p.total)}<br><button class="btn small danger" onclick="delItem('purchases','${p.id}')">Supprimer</button></div></div>`,'Aucun achat enregistré.');
