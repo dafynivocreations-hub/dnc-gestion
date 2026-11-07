@@ -87,13 +87,13 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <button class="btn secondary" onclick="showPage('production')">＋ Enregistrer une fabrication</button>
 <button class="btn secondary" onclick="showPage('ventes')">＋ Enregistrer une vente</button>
 </div>
-<div class="notice" style="margin-top:13px">Important : le bénéfice est calculé sur le coût de fabrication des pièces effectivement vendues. La trésorerie est une estimation simple. Enregistre chaque achat et chaque vente pour garder les chiffres à jour.</div>
+<div class="notice" style="margin-top:13px">Les nouveaux achats enregistrés ici concernent uniquement les matières premières. Les anciens achats déjà sauvegardés sont conservés. Le bénéfice réalisé est calculé sur les produits effectivement vendus, sans déduire deux fois les matières premières.</div>
 </section>
 <section class="page" id="achats">
 <h2>Enregistrer un achat</h2>
 <div class="card">
 <form id="purchaseForm">
-<div class="field"><label for="pName">Matière ou dépense</label><input id="pName" required placeholder="Ex. tissu éponge, fil, emballage"></div>
+<div class="field"><label for="pName">Matière première achetée</label><input id="pName" required placeholder="Ex. tissu éponge, biais, fil, emballage"></div>
 <div class="formgrid">
 <div class="field"><label for="pQty">Quantité achetée</label><input id="pQty" type="number" min="0.01" step="any" value="1" required></div>
 <div class="field"><label for="pUnit">Unité</label><select id="pUnit"><option>mètre</option><option>pièce</option><option>rouleau</option><option>lot</option><option>kg</option><option>autre</option></select></div>
@@ -146,7 +146,7 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 </section>
 <section class="page" id="produits">
 <h2>Achats, ventes et bénéfices par produit</h2>
-<div class="notice">Le bénéfice réalisé est calculé uniquement sur les quantités effectivement vendues : chiffre d’affaires − coût de fabrication des pièces vendues − frais liés aux ventes. Les achats de matières premières restent suivis séparément et ne sont pas déduits une deuxième fois.</div>
+<div class="notice">Le bénéfice réellement réalisé est calculé uniquement sur les quantités vendues : chiffre d’affaires − coût de fabrication des pièces vendues − frais liés aux ventes. Les achats de matières premières sont suivis séparément et ne sont pas déduits une deuxième fois. Les anciennes données restent conservées.</div>
 <div class="card" style="margin-top:12px"><div class="field"><label for="productPeriod">Période</label><select id="productPeriod"><option value="all">Depuis le début</option><option value="month">Mois en cours</option><option value="year">Année en cours</option></select></div><div class="costline"><span>Achats de matières premières sur la période</span><b id="productPurchases">0 Ar</b></div><div id="productReport"></div></div>
 </section>
 <section class="page" id="historique">
