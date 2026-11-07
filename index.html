@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#176b58">
+<meta name="description" content="Gestion des achats, fabrications, ventes et bénéfices de l’atelier DNC.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
 <title>DNC — Gestion de fabrication</title>
 <style>
 :root{--green:#176b58;--green2:#e4f3ed;--ink:#172b26;--muted:#64736e;--line:#dce7e2;--bg:#f4f8f6;--white:#fff;--red:#b42318;--orange:#a85d00}
@@ -25,9 +28,9 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <nav class="tabs" aria-label="Sections">
 <button class="tab active" data-page="dashboard">Tableau de bord</button>
 <button class="tab" data-page="achats">Achats</button>
+<button class="tab" data-page="bilanProduits">Bilan produits</button>
 <button class="tab" data-page="production">Fabrication</button>
 <button class="tab" data-page="ventes">Ventes</button>
-<button class="tab" data-page="produits">Par produit</button>
 <button class="tab" data-page="historique">Historique</button>
 <button class="tab" data-page="reglages">Réglages</button>
 </nav>
@@ -37,41 +40,6 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <div class="metric"><small>Bénéfice estimé</small><strong id="mProfit">0 Ar</strong><em>Sur produits vendus</em></div>
 <div class="metric"><small>Pièces en stock</small><strong id="mStock">0</strong><em>Produites moins vendues</em></div>
 <div class="metric"><small>Trésorerie estimée</small><strong id="mCash">100 000 Ar</strong><em>Budget + encaissements − achats</em></div>
-</div>
-<h2>Bilan quotidien</h2>
-<div class="card">
-  <div class="field">
-    <label for="reportDate">Choisir la date du bilan</label>
-    <input id="reportDate" type="date">
-  </div>
-  <div class="grid">
-    <div class="metric"><small>Ventes du jour</small><strong id="dRevenue">0 Ar</strong><em id="dSalesCount">0 pièce vendue</em></div>
-    <div class="metric"><small>Bénéfice estimé du jour</small><strong id="dProfit">0 Ar</strong><em>Après coût des pièces vendues et frais de vente</em></div>
-    <div class="metric"><small>Achats / dépenses payés</small><strong id="dPurchases">0 Ar</strong><em>Sorties enregistrées aujourd'hui</em></div>
-    <div class="metric"><small>Fabrication du jour</small><strong id="dProductionCost">0 Ar</strong><em id="dMadeCount">0 pièce fabriquée</em></div>
-  </div>
-  <div class="divider"></div>
-  <div class="costline"><span>Encaissements des ventes</span><b id="dIncome">0 Ar</b></div>
-  <div class="costline"><span>Achats enregistrés</span><b id="dPurchaseOut">0 Ar</b></div>
-  <div class="costline"><span>Frais liés aux ventes</span><b id="dSaleOut">0 Ar</b></div>
-  <div class="costline total"><span>Mouvement net de trésorerie du jour*</span><b id="dCashFlow">0 Ar</b></div>
-  <div class="sub" style="margin-top:8px">*Calcul simplifié : ventes enregistrées − achats enregistrés − frais de vente. Le bénéfice estimé est calculé séparément pour éviter de compter deux fois les matières premières (achat puis utilisation en fabrication).</div>
-  <h3 style="margin-top:16px">Opérations de cette date</h3>
-  <div id="dailyOperations"></div>
-</div>
-<h2>Bilan général · Depuis le début de DNC</h2>
-<div class="card">
-  <div class="grid">
-    <div class="metric"><small>Chiffre d'affaires cumulé</small><strong id="gRevenue">0 Ar</strong><em id="gSalesCount">0 pièce vendue</em></div>
-    <div class="metric"><small>Bénéfice estimé cumulé</small><strong id="gProfit">0 Ar</strong><em>Ventes − coût des pièces vendues − frais de vente</em></div>
-    <div class="metric"><small>Total des achats</small><strong id="gPurchases">0 Ar</strong><em>Depuis le début</em></div>
-    <div class="metric"><small>Coût total de fabrication</small><strong id="gProductionCost">0 Ar</strong><em id="gMadeCount">0 pièce fabriquée</em></div>
-  </div>
-  <div class="divider"></div>
-  <div class="costline"><span>Encaissements cumulés</span><b id="gIncome">0 Ar</b></div>
-  <div class="costline"><span>Frais de vente cumulés</span><b id="gSaleOut">0 Ar</b></div>
-  <div class="costline total"><span>Trésorerie estimée actuelle</span><b id="gCash">0 Ar</b></div>
-  <div class="sub" style="margin-top:8px">Ce bilan additionne toutes les opérations enregistrées, quelle que soit leur date. Il est calculé à partir des données conservées dans cette application.</div>
 </div>
 <h2>Résumé de l'atelier</h2>
 <div class="card">
@@ -87,13 +55,26 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <button class="btn secondary" onclick="showPage('production')">＋ Enregistrer une fabrication</button>
 <button class="btn secondary" onclick="showPage('ventes')">＋ Enregistrer une vente</button>
 </div>
-<div class="notice" style="margin-top:13px">Les nouveaux achats enregistrés ici concernent uniquement les matières premières. Les anciens achats déjà sauvegardés sont conservés. Le bénéfice réalisé est calculé sur les produits effectivement vendus, sans déduire deux fois les matières premières.</div>
+<div class="notice" style="margin-top:13px">Important : le bénéfice est calculé sur le coût de fabrication des pièces effectivement vendues. La trésorerie est une estimation simple. Enregistre chaque achat et chaque vente pour garder les chiffres à jour.</div>
+</section>
+<section class="page" id="bilanProduits">
+<h2>Bilan achat – fabrication – vente par produit</h2>
+<div class="notice">Le coût des matières utilisées est rattaché au produit dans chaque fiche de fabrication. Les achats de matières premières enregistrés dans « Achats » restent affichés séparément tant qu'ils ne sont pas affectés à une fabrication : ils ne sont pas déduits une deuxième fois du bénéfice.</div>
+<div class="grid" style="margin-top:10px">
+ <div class="metric"><small>Achats de matières premières enregistrés</small><strong id="reportPurchases">0 Ar</strong><em>Tous produits confondus</em></div>
+ <div class="metric"><small>Coût total des fabrications</small><strong id="reportProductionCost">0 Ar</strong><em>Matières + main-d'œuvre + autres</em></div>
+ <div class="metric"><small>Chiffre d'affaires</small><strong id="reportRevenue">0 Ar</strong><em>Ventes enregistrées</em></div>
+ <div class="metric"><small>Bénéfice estimé réalisé</small><strong id="reportProfit">0 Ar</strong><em>Sur les quantités vendues</em></div>
+</div>
+<h2>Détail par produit</h2>
+<div class="card" id="productReport"></div>
+<p class="sub">Pour obtenir un bilan exact par produit, utilise le même nom de produit dans « Fabrication » et « Ventes » (ex. Essuie-mains DNC). Le bénéfice est estimé au coût moyen de fabrication du produit.</p>
 </section>
 <section class="page" id="achats">
 <h2>Enregistrer un achat</h2>
 <div class="card">
 <form id="purchaseForm">
-<div class="field"><label for="pName">Matière première achetée</label><input id="pName" required placeholder="Ex. tissu éponge, biais, fil, emballage"></div>
+<div class="field"><label for="pName">Matière première</label><input id="pName" required placeholder="Ex. tissu éponge, fil, biais, tissu fleuri"></div>
 <div class="formgrid">
 <div class="field"><label for="pQty">Quantité achetée</label><input id="pQty" type="number" min="0.01" step="any" value="1" required></div>
 <div class="field"><label for="pUnit">Unité</label><select id="pUnit"><option>mètre</option><option>pièce</option><option>rouleau</option><option>lot</option><option>kg</option><option>autre</option></select></div>
@@ -104,7 +85,12 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <button class="btn" type="submit">Enregistrer l'achat</button>
 </form>
 </div>
-<h2>Achats enregistrés</h2><div class="card" id="purchaseList"></div>
+<h2>Matières premières achetées</h2>
+ <div class="card">
+ <div class="field"><label for="purchaseSearch">Rechercher une matière première achetée</label><input id="purchaseSearch" type="search" placeholder="Ex. tissu éponge, biais, fil..."></div>
+ <div id="materialSummary"></div>
+ </div>
+ <h2>Historique détaillé des achats</h2><div class="card" id="purchaseList"></div>
 </section>
 <section class="page" id="production">
 <h2>Enregistrer une fabrication</h2>
@@ -144,11 +130,6 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 </div>
 <h2>Ventes enregistrées</h2><div class="card" id="saleList"></div>
 </section>
-<section class="page" id="produits">
-<h2>Achats, ventes et bénéfices par produit</h2>
-<div class="notice">Le bénéfice réellement réalisé est calculé uniquement sur les quantités vendues : chiffre d’affaires − coût de fabrication des pièces vendues − frais liés aux ventes. Les achats de matières premières sont suivis séparément et ne sont pas déduits une deuxième fois. Les anciennes données restent conservées.</div>
-<div class="card" style="margin-top:12px"><div class="field"><label for="productPeriod">Période</label><select id="productPeriod"><option value="all">Depuis le début</option><option value="month">Mois en cours</option><option value="year">Année en cours</option></select></div><div class="costline"><span>Achats de matières premières sur la période</span><b id="productPurchases">0 Ar</b></div><div id="productReport"></div></div>
-</section>
 <section class="page" id="historique">
 <h2>Historique et sauvegarde</h2>
 <div class="card"><div class="sub">Les données restent dans le stockage local de ce navigateur. Exporte régulièrement une sauvegarde pour éviter de perdre tes chiffres si tu changes de téléphone ou de navigateur.</div>
@@ -183,10 +164,8 @@ function num(id){return Number(document.getElementById(id).value)||0}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showPage(name){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===name));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page===name));window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+document.getElementById('purchaseSearch').addEventListener('input',render);
 ['pDate','prodDate','sDate'].forEach(id=>document.getElementById(id).value=today());
-document.getElementById('reportDate').value=today();
-document.getElementById('reportDate').addEventListener('change',renderDaily);
-document.getElementById('productPeriod').addEventListener('change',renderProducts);
 function totalCost(p){return (Number(p.materials)||0)+(Number(p.labor)||0)+(Number(p.other)||0)}
 function totals(){
  const made=db.productions.reduce((s,p)=>s+p.qty,0), sold=db.sales.reduce((s,p)=>s+p.qty,0);
@@ -201,85 +180,47 @@ function totals(){
  const cash=db.budget+revenue-purchases-saleExpenses;
  return {made,sold,stock:Math.max(0,made-sold),productionCost,avgCost,revenue,costSold,profit,purchases,expenses:otherExpenses+saleExpenses,cash}
 }
-function dailyReport(){
- const date=document.getElementById('reportDate')?.value||today();
- const purchases=db.purchases.filter(x=>x.date===date);
- const productions=db.productions.filter(x=>x.date===date);
- const sales=db.sales.filter(x=>x.date===date);
- const revenue=sales.reduce((s,x)=>s+(Number(x.qty)||0)*(Number(x.price)||0),0);
- const saleExpenses=sales.reduce((s,x)=>s+(Number(x.expense)||0),0);
- const purchaseOut=purchases.reduce((s,x)=>s+(Number(x.total)||0),0);
- const productionCost=productions.reduce((s,x)=>s+totalCost(x),0);
- const made=productions.reduce((s,x)=>s+(Number(x.qty)||0),0);
- const sold=sales.reduce((s,x)=>s+(Number(x.qty)||0),0);
- const allMade=db.productions.reduce((s,x)=>s+(Number(x.qty)||0),0);
- const allCost=db.productions.reduce((s,x)=>s+totalCost(x),0);
- const avgCost=allMade?allCost/allMade:0;
- const profit=revenue-(sold*avgCost)-saleExpenses;
- const cashFlow=revenue-purchaseOut-saleExpenses;
- const operations=[
-  ...purchases.map(x=>({kind:'Achat',label:x.name,amount:-Number(x.total||0)})),
-  ...productions.map(x=>({kind:'Fabrication',label:x.name,amount:-totalCost(x)})),
-  ...sales.map(x=>({kind:'Vente',label:x.name+' ('+x.qty+' pièce(s))',amount:Number(x.qty||0)*Number(x.price||0)}))
- ];
- return {date,revenue,saleExpenses,purchaseOut,productionCost,made,sold,profit,cashFlow,operations};
+function productKey(name){return String(name||'').trim().toLocaleLowerCase('fr').replace(/\s+/g,' ')}
+function productReportData(){
+ const groups=new Map();
+ const get=(name)=>{const key=productKey(name);if(!key)return null;if(!groups.has(key))groups.set(key,{name:String(name).trim(),made:0,sold:0,productionCost:0,materials:0,labor:0,other:0,revenue:0,saleExpenses:0});return groups.get(key)};
+ db.productions.forEach(p=>{const g=get(p.name);if(!g)return;const q=Number(p.qty)||0;g.made+=q;g.productionCost+=totalCost(p);g.materials+=Number(p.materials)||0;g.labor+=Number(p.labor)||0;g.other+=Number(p.other)||0;});
+ db.sales.forEach(p=>{const g=get(p.name);if(!g)return;g.sold+=Number(p.qty)||0;g.revenue+=(Number(p.qty)||0)*(Number(p.price)||0);g.saleExpenses+=Number(p.expense)||0;});
+ return [...groups.values()].map(g=>{const unitCost=g.made?g.productionCost/g.made:0;const costSold=Math.min(g.sold,g.made)*unitCost;return {...g,stock:Math.max(0,g.made-g.sold),unitCost,costSold,profit:g.revenue-costSold-g.saleExpenses,unmatched:Math.max(0,g.sold-g.made)}}).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
-function renderDaily(){
- const d=dailyReport(),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
- set('dRevenue',money(d.revenue));set('dSalesCount',d.sold+' pièce(s) vendue(s)');
- set('dProfit',money(d.profit));set('dPurchases',money(d.purchaseOut));
- set('dProductionCost',money(d.productionCost));set('dMadeCount',d.made+' pièce(s) fabriquée(s)');
- set('dIncome',money(d.revenue));set('dPurchaseOut',money(d.purchaseOut));
- set('dSaleOut',money(d.saleExpenses));set('dCashFlow',money(d.cashFlow));
- const cashEl=document.getElementById('dCashFlow');if(cashEl)cashEl.className=d.cashFlow<0?'negative':'success';
- const profitEl=document.getElementById('dProfit');if(profitEl)profitEl.className=d.profit<0?'negative':'success';
- const target=document.getElementById('dailyOperations');
- if(target){
-  target.innerHTML=d.operations.length?d.operations.map(x=>`<div class="item"><div><b>${esc(x.kind)} · ${esc(x.label)}</b></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`).join(''):'<div class="empty">Aucune opération enregistrée pour cette date.</div>';
- }
+function renderMaterialSummary(){
+ const query=(document.getElementById('purchaseSearch').value||'').trim().toLocaleLowerCase('fr');
+ const groups=new Map();
+ db.purchases.forEach(p=>{const name=String(p.name||'').trim();const unit=String(p.unit||'');const key=productKey(name)+'|'+unit.toLocaleLowerCase('fr');if(!name)return;if(!groups.has(key))groups.set(key,{name,unit,qty:0,total:0,count:0});const g=groups.get(key);g.qty+=Number(p.qty)||0;g.total+=Number(p.total)||0;g.count++;});
+ const rows=[...groups.values()].filter(g=>!query||g.name.toLocaleLowerCase('fr').includes(query)).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+ document.getElementById('materialSummary').innerHTML=rows.length?rows.map(g=>`<div class="item"><div><b>${esc(g.name)}</b><small>Quantité achetée : ${g.qty} ${esc(g.unit)} · ${g.count} achat(s)</small></div><div class="amount">${money(g.total)}</div></div>`).join(''):'<div class="empty">Aucune matière première trouvée. Vérifie le nom recherché ou enregistre un achat.</div>';
 }
-function productRows(){
- const period=document.getElementById('productPeriod')?.value||'all';
- const now=today(), month=now.slice(0,7), year=now.slice(0,4);
- const inPeriod=x=>period==='all'||(period==='month'&&(x.date||'').slice(0,7)===month)||(period==='year'&&(x.date||'').slice(0,4)===year);
- const names=[...new Set([...db.productions,...db.sales].map(x=>(x.name||'').trim()).filter(Boolean))];
- return names.map(name=>{
-  const batches=db.productions.filter(x=>(x.name||'').trim()===name);
-  const sales=db.sales.filter(x=>(x.name||'').trim()===name&&inPeriod(x));
-  const made=batches.reduce((a,x)=>a+(Number(x.qty)||0),0);
-  const totalCost=batches.reduce((a,x)=>a+(Number(x.materials)||0)+(Number(x.labor)||0)+(Number(x.other)||0),0);
-  const unitCost=made?totalCost/made:0;
-  const qty=sales.reduce((a,x)=>a+(Number(x.qty)||0),0);
-  const revenue=sales.reduce((a,x)=>a+(Number(x.qty)||0)*(Number(x.price)||0),0);
-  const fees=sales.reduce((a,x)=>a+(Number(x.expense)||0),0);
-  const soldCost=qty*unitCost;
-  return {name,made,qty,stock:Math.max(0,made-db.sales.filter(x=>(x.name||'').trim()===name).reduce((a,x)=>a+(Number(x.qty)||0),0)),unitCost,revenue,soldCost,fees,profit:revenue-soldCost-fees};
- }).filter(x=>x.made||x.qty).sort((a,b)=>b.profit-a.profit);
-}
-function renderProducts(){
- const target=document.getElementById('productReport'); if(!target)return;
- const period=document.getElementById('productPeriod')?.value||'all'; const now=today();
- const raw=db.purchases.filter(x=>period==='all'||(period==='month'&&(x.date||'').slice(0,7)===now.slice(0,7))||(period==='year'&&(x.date||'').slice(0,4)===now.slice(0,4))).reduce((a,x)=>a+(Number(x.total)||0),0);
- document.getElementById('productPurchases').textContent=money(raw);
- const rows=productRows();
- target.innerHTML=rows.length?rows.map(x=>`<div class="item"><div style="flex:1;min-width:0"><b>${esc(x.name)}</b><small>Fabriquées : ${x.made} · Vendues : ${x.qty} · Stock estimé : ${x.stock}</small><small>Coût moyen / pièce : ${money(x.unitCost)}</small><small>Chiffre d'affaires : ${money(x.revenue)}</small><small>Coût des pièces vendues : ${money(x.soldCost)} · Frais de vente : ${money(x.fees)}</small><small class="${x.profit<0?'negative':'success'}"><b>Bénéfice réalisé : ${money(x.profit)}</b></small></div></div>`).join(''):'<div class="empty">Aucune fabrication ou vente enregistrée pour le moment.</div>';
+function renderProductReport(){
+ const rows=productReportData();
+ const purchases=db.purchases.reduce((sum,p)=>sum+(Number(p.total)||0),0);
+ const productionCost=rows.reduce((sum,p)=>sum+p.productionCost,0);
+ const revenue=rows.reduce((sum,p)=>sum+p.revenue,0);
+ const profit=rows.reduce((sum,p)=>sum+p.profit,0);
+ document.getElementById('reportPurchases').textContent=money(purchases);
+ document.getElementById('reportProductionCost').textContent=money(productionCost);
+ document.getElementById('reportRevenue').textContent=money(revenue);
+ const profitEl=document.getElementById('reportProfit');profitEl.textContent=money(profit);profitEl.className=profit<0?'negative':'success';
+ document.getElementById('productReport').innerHTML=rows.length?rows.map(g=>`<div class="item"><div style="flex:1;min-width:0"><b>${esc(g.name)}</b><small>Fabriquées : ${g.made} · Vendues : ${g.sold} · Stock : ${g.stock}</small><small>Matières utilisées : ${money(g.materials)} · Main-d'œuvre : ${money(g.labor)} · Autres coûts : ${money(g.other)}</small><small>Coût fabrication : ${money(g.productionCost)} · Coût moyen/pièce : ${money(g.unitCost)}</small><small>Chiffre d'affaires : ${money(g.revenue)} · Frais de vente : ${money(g.saleExpenses)}</small>${g.unmatched?`<small class="negative">Attention : ${g.unmatched} pièce(s) vendue(s) au-delà des quantités fabriquées enregistrées pour ce produit.</small>`:''}</div><div class="amount">${money(g.profit)}<small class="${g.profit<0?'negative':'success'}">Bénéfice estimé</small></div></div>`).join(''):'<div class="empty">Aucune fabrication ou vente enregistrée pour le moment.</div>';
 }
 function render(){
  const t=totals();
  const set=(id,v)=>document.getElementById(id).textContent=v;
  set('mRevenue',money(t.revenue));set('mProfit',money(t.profit));set('mStock',t.stock);set('mCash',money(t.cash));set('mMade',t.made);set('mSold',t.sold);set('mUnitCost',money(t.avgCost));set('mPurchases',money(t.purchases));set('mExpenses',money(t.expenses));
- set('gRevenue',money(t.revenue));set('gSalesCount',t.sold+' pièce(s) vendue(s)');set('gProfit',money(t.profit));set('gPurchases',money(t.purchases));set('gProductionCost',money(t.productionCost));set('gMadeCount',t.made+' pièce(s) fabriquée(s)');set('gIncome',money(t.revenue));set('gSaleOut',money(db.sales.reduce((s,x)=>s+(Number(x.expense)||0),0)));set('gCash',money(t.cash));
- document.getElementById('gProfit').className=t.profit<0?'negative':'success';
  document.getElementById('mProfit').className=t.profit<0?'negative':'success';
  const list=(items,fn,empty)=>items.length?items.slice().reverse().map(fn).join(''):`<div class="empty">${empty}</div>`;
+ renderMaterialSummary();
  document.getElementById('purchaseList').innerHTML=list(db.purchases,p=>`<div class="item"><div><b>${esc(p.name)}</b><small>${esc(p.qty)} ${esc(p.unit)} · ${esc(p.date)}${p.note?' · '+esc(p.note):''}</small></div><div class="amount">${money(p.total)}<br><button class="btn small danger" onclick="delItem('purchases','${p.id}')">Supprimer</button></div></div>`,'Aucun achat enregistré.');
  document.getElementById('productionList').innerHTML=list(db.productions,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièces</b><small>${esc(p.date)} · matières ${money(p.materials)} · main-d'œuvre ${money(p.labor)} · autres ${money(p.other)}</small><small>Coût par pièce : ${money(totalCost(p)/p.qty)}</small></div><div class="amount">${money(totalCost(p))}<br><button class="btn small danger" onclick="delItem('productions','${p.id}')">Supprimer</button></div></div>`,'Aucune fabrication enregistrée.');
  document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
  const hist=[...db.purchases.map(x=>({...x,type:'Achat',amount:-x.total})),...db.productions.map(x=>({...x,type:'Fabrication',amount:-totalCost(x)})),...db.sales.map(x=>({...x,type:'Vente',amount:x.qty*x.price}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
  document.getElementById('allHistory').innerHTML=list(hist.slice(0,40),x=>`<div class="item"><div><b>${x.type} · ${esc(x.name)}</b><small>${esc(x.date)}</small></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`,'Les opérations apparaîtront ici.');
  document.getElementById('budget').value=db.budget;document.getElementById('defaultPrice').value=db.defaultPrice;
- renderDaily();
- renderProducts();
+ renderProductReport();
 }
 function delItem(group,id){if(confirm('Supprimer cette opération ?')){db[group]=db[group].filter(x=>x.id!==id);save()}}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -297,5 +238,6 @@ document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('Ef
 document.getElementById('sPrice').value=db.defaultPrice;
 render();updateBatch();updateSale();
 </script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
 </body>
 </html>
