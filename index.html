@@ -31,6 +31,7 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <button class="tab" data-page="bilanProduits">Bilan produits</button>
 <button class="tab" data-page="production">Fabrication</button>
 <button class="tab" data-page="ventes">Ventes</button>
+<button class="tab" data-page="clients">Clients</button>
 <button class="tab" data-page="historique">Historique</button>
 <button class="tab" data-page="reglages">Réglages</button>
 </nav>
@@ -119,6 +120,7 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <div class="card">
 <form id="saleForm">
 <div class="field"><label for="sProduct">Produit vendu</label><input id="sProduct" value="Essuie-mains DNC" required></div>
+<div class="field"><label for="sClient">Client</label><select id="sClient"><option value="">Client non renseigné</option></select></div>
 <div class="formgrid">
 <div class="field"><label for="sQty">Quantité vendue</label><input id="sQty" type="number" min="1" step="1" value="1" required></div>
 <div class="field"><label for="sPrice">Prix par pièce (Ar)</label><input id="sPrice" type="number" min="0" step="1" value="7000" required></div>
@@ -131,6 +133,31 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 </form>
 </div>
 <h2>Ventes enregistrées</h2><div class="card" id="saleList"></div>
+</section>
+<section class="page" id="clients">
+<h2>Fichier clients DNC</h2>
+<div class="notice">Enregistre les coordonnées de tes clients. Les ventes associées à un client seront regroupées dans son historique. Les informations restent sur ce téléphone et dans les sauvegardes exportées.</div>
+<div class="card" style="margin-top:10px">
+<h3 id="clientFormTitle">Ajouter un client</h3>
+<form id="clientForm">
+<input type="hidden" id="clientEditId">
+<div class="field"><label for="cName">Nom du client / Société</label><input id="cName" required placeholder="Nom et prénom ou raison sociale"></div>
+<div class="formgrid">
+<div class="field"><label for="cPhone">Téléphone</label><input id="cPhone" type="tel" placeholder="Numéro de téléphone"></div>
+<div class="field"><label for="cNif">NIF</label><input id="cNif" placeholder="Numéro NIF"></div>
+<div class="field"><label for="cStat">STAT</label><input id="cStat" placeholder="Numéro STAT"></div>
+</div>
+<div class="field"><label for="cAddress">Adresse de livraison</label><textarea id="cAddress" placeholder="Adresse complète, quartier, commune..."></textarea></div>
+<div class="actions"><button class="btn" type="submit" id="clientSaveBtn">Enregistrer le client</button><button class="btn secondary" type="button" id="clientCancelBtn" style="display:none">Annuler la modification</button></div>
+</form>
+</div>
+<h2>Ventes par client</h2>
+<div class="card">
+<div class="field"><label for="clientHistorySelect">Choisir un client pour voir ses ventes</label><select id="clientHistorySelect"><option value="">Tous les clients</option></select></div>
+<div id="clientSalesSummary"></div>
+<div id="clientSalesList"></div>
+</div>
+<h2>Liste des clients</h2><div class="card" id="clientList"></div>
 </section>
 <section class="page" id="historique">
 <h2>Historique et sauvegarde</h2>
@@ -157,7 +184,7 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <script>
 const KEY='dnc_gestion_v1';
 const today=()=>new Date().toISOString().slice(0,10);
-const blank=()=>({budget:100000,defaultPrice:7000,purchases:[],productions:[],sales:[]});
+const blank=()=>({budget:100000,defaultPrice:7000,purchases:[],productions:[],sales:[],clients:[]});
 let db=load();
 function load(){try{return {...blank(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return blank()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
@@ -212,6 +239,17 @@ function renderProductReport(){
  const profitEl=document.getElementById('reportProfit');profitEl.textContent=money(profit);profitEl.className=profit<0?'negative':'success';
  document.getElementById('productReport').innerHTML=rows.length?rows.map(g=>`<div class="item"><div style="flex:1;min-width:0"><b>${esc(g.name)}</b><small>Fabriquées : ${g.made} · Vendues : ${g.sold} · Stock : ${g.stock}</small><small>Matières utilisées : ${money(g.materials)} · Main-d'œuvre : ${money(g.labor)} · Autres coûts : ${money(g.other)}</small><small>Coût fabrication total : ${money(g.productionCost)} · Coût moyen/pièce : ${money(g.unitCost)}</small><small>Coût de revient des pièces vendues : ${money(g.costSold)}</small><small>Coût de revient des pièces payées : ${money(g.paidCost)}</small><small>CA total : ${money(g.revenue)} · encaissé : ${money(g.paidRevenue)} · à recevoir : ${money(g.unpaidRevenue)}</small><small>Frais de vente payés : ${money(g.paidSaleExpenses)}</small>${g.unmatched? `<small class="negative">Attention : ${g.unmatched} pièce(s) vendue(s) au-delà des quantités fabriquées enregistrées pour ce produit.</small>`:''}</div><div class="amount">${money(g.realizedProfit)}<small class="${g.realizedProfit<0?'negative':'success'}">Bénéfice net encaissé</small></div></div>`).join(''):'<div class="empty">Aucune fabrication ou vente enregistrée pour le moment.</div>';
 }
+function resetClientForm(){document.getElementById('clientForm').reset();document.getElementById('clientEditId').value='';document.getElementById('clientFormTitle').textContent='Ajouter un client';document.getElementById('clientSaveBtn').textContent='Enregistrer le client';document.getElementById('clientCancelBtn').style.display='none'}
+function editClient(clientId){const c=db.clients.find(x=>x.id===clientId);if(!c)return;document.getElementById('clientEditId').value=c.id;document.getElementById('cName').value=c.name||'';document.getElementById('cPhone').value=c.phone||'';document.getElementById('cAddress').value=c.address||'';document.getElementById('cNif').value=c.nif||'';document.getElementById('cStat').value=c.stat||'';document.getElementById('clientFormTitle').textContent='Modifier le client';document.getElementById('clientSaveBtn').textContent='Enregistrer les modifications';document.getElementById('clientCancelBtn').style.display='inline-block';showPage('clients')}
+function deleteClient(clientId){const linked=db.sales.some(s=>s.clientId===clientId);if(linked){alert('Ce client possède déjà des ventes. Pour conserver l’historique, il ne peut pas être supprimé. Tu peux modifier sa fiche.');return}if(confirm('Supprimer cette fiche client ?')){db.clients=db.clients.filter(c=>c.id!==clientId);save()}}
+function renderClientSelect(){const saleSelect=document.getElementById('sClient');const old=saleSelect.value;saleSelect.innerHTML='<option value="">Client non renseigné</option>'+db.clients.slice().sort((a,b)=>a.name.localeCompare(b.name,'fr')).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');if(db.clients.some(c=>c.id===old))saleSelect.value=old;
+ const hist=document.getElementById('clientHistorySelect');const chosen=hist.value;hist.innerHTML='<option value="">Tous les clients</option>'+db.clients.slice().sort((a,b)=>a.name.localeCompare(b.name,'fr')).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');if(db.clients.some(c=>c.id===chosen))hist.value=chosen;}
+function renderClients(){
+ renderClientSelect();
+ document.getElementById('clientList').innerHTML=db.clients.length?db.clients.slice().sort((a,b)=>a.name.localeCompare(b.name,'fr')).map(c=>{const sales=db.sales.filter(s=>s.clientId===c.id);const total=sales.reduce((n,s)=>n+(Number(s.qty)||0)*(Number(s.price)||0),0);const paid=sales.filter(s=>saleIsPaid(s)).reduce((n,s)=>n+(Number(s.qty)||0)*(Number(s.price)||0),0);const due=total-paid;return `<div class="item"><div style="flex:1;min-width:0"><b>${esc(c.name)}</b><small>Téléphone : ${esc(c.phone||'Non renseigné')}</small><small>Livraison : ${esc(c.address||'Non renseignée')}</small><small>NIF : ${esc(c.nif||'—')} · STAT : ${esc(c.stat||'—')}</small><small>${sales.length} vente(s) · Total ${money(total)} · Encaissé ${money(paid)} · À recevoir ${money(due)}</small></div><div class="amount"><button class="btn small secondary" onclick="editClient('${c.id}')">Modifier</button><br><button class="btn small danger" style="margin-top:5px" onclick="deleteClient('${c.id}')">Supprimer</button></div></div>`}).join(''):'<div class="empty">Aucun client enregistré. Ajoute ton premier client avec le formulaire ci-dessus.</div>';
+ const selected=document.getElementById('clientHistorySelect').value;const sales=db.sales.filter(s=>!selected||s.clientId===selected).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));const total=sales.reduce((n,s)=>n+s.qty*s.price,0);const paid=sales.filter(s=>saleIsPaid(s)).reduce((n,s)=>n+s.qty*s.price,0);const unpaid=total-paid;document.getElementById('clientSalesSummary').innerHTML=`<div class="costline"><span>Ventes enregistrées</span><b>${sales.length}</b></div><div class="costline"><span>Montant total</span><b>${money(total)}</b></div><div class="costline"><span>Montant encaissé</span><b class="success">${money(paid)}</b></div><div class="costline"><span>Reste à recevoir</span><b class="negative">${money(unpaid)}</b></div>`;
+ document.getElementById('clientSalesList').innerHTML=sales.length?sales.map(s=>{const c=db.clients.find(x=>x.id===s.clientId);return `<div class="item"><div><b>${esc(s.name)} · ${s.qty} pièce(s)</b><small>${esc(s.date)} · ${esc(c?.name||s.clientName||'Client non renseigné')}</small><small>${saleIsPaid(s)?'Payée':'En attente de paiement'} · ${money(s.price)} / pièce</small></div><div class="amount">${money(s.qty*s.price)}</div></div>`}).join(''):'<div class="empty">Aucune vente pour cette sélection.</div>';
+}
 function render(){
  const t=totals();
  const set=(id,v)=>document.getElementById(id).textContent=v;
@@ -221,14 +259,16 @@ function render(){
  renderMaterialSummary();
  document.getElementById('purchaseList').innerHTML=list(db.purchases,p=>`<div class="item"><div><b>${esc(p.name)}</b><small>${esc(p.qty)} ${esc(p.unit)} · ${esc(p.date)}${p.note?' · '+esc(p.note):''}</small></div><div class="amount">${money(p.total)}<br><button class="btn small danger" onclick="delItem('purchases','${p.id}')">Supprimer</button></div></div>`,'Aucun achat enregistré.');
  document.getElementById('productionList').innerHTML=list(db.productions,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièces</b><small>${esc(p.date)} · matières ${money(p.materials)} · main-d'œuvre ${money(p.labor)} · autres ${money(p.other)}</small><small>Coût par pièce : ${money(totalCost(p)/p.qty)}</small></div><div class="amount">${money(totalCost(p))}<br><button class="btn small danger" onclick="delItem('productions','${p.id}')">Supprimer</button></div></div>`,'Aucune fabrication enregistrée.');
- document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small><small class="${saleIsPaid(p)?'success':'negative'}">${saleIsPaid(p)?'Payée · incluse dans le bénéfice encaissé':'Non payée · exclue du bénéfice encaissé'}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small secondary" onclick="toggleSalePaid('${p.id}')">${saleIsPaid(p)?'Marquer non payée':'Marquer payée'}</button><br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
+ document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small><small>Client : ${esc(db.clients.find(c=>c.id===p.clientId)?.name||p.clientName||'Non renseigné')}</small><select aria-label="Associer cette vente à un client" style="max-width:210px;margin-top:5px;border:1px solid #cddbd4;border-radius:8px;padding:6px;background:white" onchange="assignSaleClient('${p.id}',this.value)"><option value="">Client non renseigné</option>${db.clients.map(c=>`<option value="${esc(c.id)}" ${p.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select><small class="${saleIsPaid(p)?'success':'negative'}">${saleIsPaid(p)?'Payée · incluse dans le bénéfice encaissé':'Non payée · exclue du bénéfice encaissé'}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small secondary" onclick="toggleSalePaid('${p.id}')">${saleIsPaid(p)?'Marquer non payée':'Marquer payée'}</button><br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
  const hist=[...db.purchases.map(x=>({...x,type:'Achat',amount:-x.total})),...db.productions.map(x=>({...x,type:'Fabrication',amount:-totalCost(x)})),...db.sales.map(x=>({...x,type:'Vente',amount:x.qty*x.price}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
  document.getElementById('allHistory').innerHTML=list(hist.slice(0,40),x=>`<div class="item"><div><b>${x.type} · ${esc(x.name)}</b><small>${esc(x.date)}</small></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`,'Les opérations apparaîtront ici.');
  document.getElementById('budget').value=db.budget;document.getElementById('defaultPrice').value=db.defaultPrice;
  renderProductReport();
+ renderClients();
 }
 function delItem(group,id){if(confirm('Supprimer cette opération ?')){db[group]=db[group].filter(x=>x.id!==id);save()}}
 function toggleSalePaid(id){const sale=db.sales.find(x=>x.id===id);if(sale){sale.paid=!saleIsPaid(sale);save();}}
+function assignSaleClient(saleId,clientId){const sale=db.sales.find(x=>x.id===saleId);if(!sale)return;const client=db.clients.find(c=>c.id===clientId);sale.clientId=client?client.id:'';sale.clientName=client?client.name:'';save();}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 document.getElementById('purchaseForm').addEventListener('submit',e=>{e.preventDefault();db.purchases.push({id:id(),name:document.getElementById('pName').value.trim(),qty:num('pQty'),unit:document.getElementById('pUnit').value,total:num('pTotal'),date:document.getElementById('pDate').value,note:document.getElementById('pNote').value.trim()});e.target.reset();document.getElementById('pQty').value=1;document.getElementById('pDate').value=today();save();showPage('achats')});
 function updateBatch(){const c=num('prodMaterials')+num('prodLabor')+num('prodOther'),q=Math.max(1,num('prodQty'));document.getElementById('liveBatchCost').textContent=money(c);document.getElementById('liveUnitCost').textContent=money(c/q)}
@@ -236,7 +276,10 @@ function updateBatch(){const c=num('prodMaterials')+num('prodLabor')+num('prodOt
 document.getElementById('productionForm').addEventListener('submit',e=>{e.preventDefault();db.productions.push({id:id(),name:document.getElementById('prodName').value.trim(),qty:num('prodQty'),date:document.getElementById('prodDate').value,materials:num('prodMaterials'),labor:num('prodLabor'),other:num('prodOther')});save();showPage('production')});
 function updateSale(){document.getElementById('liveSaleRevenue').textContent=money(num('sQty')*num('sPrice'))}
 ['sQty','sPrice'].forEach(id=>document.getElementById(id).addEventListener('input',updateSale));
-document.getElementById('saleForm').addEventListener('submit',e=>{e.preventDefault();const sold=db.sales.reduce((s,p)=>s+p.qty,0),made=db.productions.reduce((s,p)=>s+p.qty,0);if(num('sQty')>made-sold){if(!confirm('La quantité vendue dépasse le stock calculé. Enregistrer quand même ?'))return}db.sales.push({id:id(),name:document.getElementById('sProduct').value.trim(),qty:num('sQty'),price:num('sPrice'),date:document.getElementById('sDate').value,expense:num('sExpense'),paid:document.getElementById('sPaid').value==='yes'});e.target.reset();document.getElementById('sQty').value=1;document.getElementById('sPrice').value=db.defaultPrice;document.getElementById('sDate').value=today();document.getElementById('sExpense').value=0;document.getElementById('sPaid').value='yes';save();showPage('ventes')});
+document.getElementById('saleForm').addEventListener('submit',e=>{e.preventDefault();const sold=db.sales.reduce((s,p)=>s+p.qty,0),made=db.productions.reduce((s,p)=>s+p.qty,0);if(num('sQty')>made-sold){if(!confirm('La quantité vendue dépasse le stock calculé. Enregistrer quand même ?'))return}const clientId=document.getElementById('sClient').value;const client=db.clients.find(c=>c.id===clientId);db.sales.push({id:id(),name:document.getElementById('sProduct').value.trim(),qty:num('sQty'),price:num('sPrice'),date:document.getElementById('sDate').value,expense:num('sExpense'),paid:document.getElementById('sPaid').value==='yes',clientId:clientId||'',clientName:client?.name||''});e.target.reset();document.getElementById('sQty').value=1;document.getElementById('sPrice').value=db.defaultPrice;document.getElementById('sDate').value=today();document.getElementById('sExpense').value=0;document.getElementById('sPaid').value='yes';save();showPage('ventes')});
+document.getElementById('clientForm').addEventListener('submit',e=>{e.preventDefault();const editId=document.getElementById('clientEditId').value;const data={name:document.getElementById('cName').value.trim(),phone:document.getElementById('cPhone').value.trim(),address:document.getElementById('cAddress').value.trim(),nif:document.getElementById('cNif').value.trim(),stat:document.getElementById('cStat').value.trim()};if(editId){const c=db.clients.find(x=>x.id===editId);if(c)Object.assign(c,data);db.sales.forEach(s=>{if(s.clientId===editId)s.clientName=data.name})}else{db.clients.push({id:id(),...data})}resetClientForm();save();showPage('clients')});
+document.getElementById('clientCancelBtn').addEventListener('click',resetClientForm);
+document.getElementById('clientHistorySelect').addEventListener('change',renderClients);
 document.getElementById('settingsForm').addEventListener('submit',e=>{e.preventDefault();db.budget=num('budget');db.defaultPrice=num('defaultPrice');document.getElementById('sPrice').value=db.defaultPrice;save();alert('Réglages enregistrés.')});
 document.getElementById('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sauvegarde-DNC-'+today()+'.json';a.click();URL.revokeObjectURL(url)});
 document.getElementById('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const imported=JSON.parse(await f.text());if(!imported||!Array.isArray(imported.purchases)||!Array.isArray(imported.productions)||!Array.isArray(imported.sales))throw Error('invalid');if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){db={...blank(),...imported};save();alert('Sauvegarde importée.')}}catch(err){alert('Fichier de sauvegarde invalide.')}e.target.value=''});
