@@ -64,11 +64,12 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
  <div class="metric"><small>Achats de matières premières enregistrés</small><strong id="reportPurchases">0 Ar</strong><em>Tous produits confondus</em></div>
  <div class="metric"><small>Coût total des fabrications</small><strong id="reportProductionCost">0 Ar</strong><em>Matières + main-d'œuvre + autres</em></div>
  <div class="metric"><small>Chiffre d'affaires</small><strong id="reportRevenue">0 Ar</strong><em>Ventes enregistrées</em></div>
- <div class="metric"><small>Bénéfice estimé réalisé</small><strong id="reportProfit">0 Ar</strong><em>Sur les quantités vendues</em></div>
+ <div class="metric"><small>Bénéfice réellement encaissé</small><strong id="reportProfit">0 Ar</strong><em>Uniquement sur les ventes payées</em></div>
+ <div class="metric"><small>Ventes non encaissées</small><strong id="reportUnpaid">0 Ar</strong><em>À recevoir</em></div>
 </div>
 <h2>Détail par produit</h2>
 <div class="card" id="productReport"></div>
-<p class="sub">Pour obtenir un bilan exact par produit, utilise le même nom de produit dans « Fabrication » et « Ventes » (ex. Essuie-mains DNC). Le bénéfice est estimé au coût moyen de fabrication du produit.</p>
+<p class="sub">Pour obtenir un bilan par produit, utilise le même nom dans « Fabrication » et « Ventes ». Le bénéfice réellement encaissé ne compte que les ventes marquées « Payée ». Les anciennes ventes, enregistrées avant ce suivi, sont considérées comme payées pour préserver l’historique.</p>
 </section>
 <section class="page" id="achats">
 <h2>Enregistrer un achat</h2>
@@ -123,6 +124,7 @@ h2{font-size:18px;margin:18px 0 10px}h3{font-size:15px;margin:0 0 12px}.sub{colo
 <div class="field"><label for="sPrice">Prix par pièce (Ar)</label><input id="sPrice" type="number" min="0" step="1" value="7000" required></div>
 <div class="field"><label for="sDate">Date</label><input id="sDate" type="date" required></div>
 <div class="field"><label for="sExpense">Frais liés à cette vente (Ar)</label><input id="sExpense" type="number" min="0" step="1" value="0" required></div>
+<div class="field"><label for="sPaid">Paiement reçu ?</label><select id="sPaid"><option value="yes">Oui, vente payée</option><option value="no">Non, en attente de paiement</option></select></div>
 </div>
 <div class="costline"><span>Recette totale</span><b id="liveSaleRevenue">7 000 Ar</b></div>
 <button class="btn" type="submit">Enregistrer la vente</button>
@@ -167,6 +169,7 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>show
 document.getElementById('purchaseSearch').addEventListener('input',render);
 ['pDate','prodDate','sDate'].forEach(id=>document.getElementById(id).value=today());
 function totalCost(p){return (Number(p.materials)||0)+(Number(p.labor)||0)+(Number(p.other)||0)}
+function saleIsPaid(s){return s.paid!==false}
 function totals(){
  const made=db.productions.reduce((s,p)=>s+p.qty,0), sold=db.sales.reduce((s,p)=>s+p.qty,0);
  const productionCost=db.productions.reduce((s,p)=>s+totalCost(p),0);
@@ -183,10 +186,10 @@ function totals(){
 function productKey(name){return String(name||'').trim().toLocaleLowerCase('fr').replace(/\s+/g,' ')}
 function productReportData(){
  const groups=new Map();
- const get=(name)=>{const key=productKey(name);if(!key)return null;if(!groups.has(key))groups.set(key,{name:String(name).trim(),made:0,sold:0,productionCost:0,materials:0,labor:0,other:0,revenue:0,saleExpenses:0});return groups.get(key)};
+ const get=(name)=>{const key=productKey(name);if(!key)return null;if(!groups.has(key))groups.set(key,{name:String(name).trim(),made:0,sold:0,productionCost:0,materials:0,labor:0,other:0,revenue:0,paidRevenue:0,unpaidRevenue:0,paidQty:0,saleExpenses:0,paidSaleExpenses:0});return groups.get(key)};
  db.productions.forEach(p=>{const g=get(p.name);if(!g)return;const q=Number(p.qty)||0;g.made+=q;g.productionCost+=totalCost(p);g.materials+=Number(p.materials)||0;g.labor+=Number(p.labor)||0;g.other+=Number(p.other)||0;});
- db.sales.forEach(p=>{const g=get(p.name);if(!g)return;g.sold+=Number(p.qty)||0;g.revenue+=(Number(p.qty)||0)*(Number(p.price)||0);g.saleExpenses+=Number(p.expense)||0;});
- return [...groups.values()].map(g=>{const unitCost=g.made?g.productionCost/g.made:0;const costSold=Math.min(g.sold,g.made)*unitCost;return {...g,stock:Math.max(0,g.made-g.sold),unitCost,costSold,profit:g.revenue-costSold-g.saleExpenses,unmatched:Math.max(0,g.sold-g.made)}}).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+ db.sales.forEach(p=>{const g=get(p.name);if(!g)return;const q=Number(p.qty)||0;const amount=q*(Number(p.price)||0);g.sold+=q;g.revenue+=amount;if(saleIsPaid(p)){g.paidRevenue+=amount;g.paidQty+=q;g.paidSaleExpenses+=Number(p.expense)||0;}else{g.unpaidRevenue+=amount;}g.saleExpenses+=Number(p.expense)||0;});
+ return [...groups.values()].map(g=>{const unitCost=g.made?g.productionCost/g.made:0;const costSold=Math.min(g.sold,g.made)*unitCost;const paidCost=Math.min(g.paidQty,g.made)*unitCost;return {...g,stock:Math.max(0,g.made-g.sold),unitCost,costSold,profit:g.revenue-costSold-g.saleExpenses,realizedProfit:g.paidRevenue-paidCost-g.paidSaleExpenses,unmatched:Math.max(0,g.sold-g.made)}}).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
 function renderMaterialSummary(){
  const query=(document.getElementById('purchaseSearch').value||'').trim().toLocaleLowerCase('fr');
@@ -200,12 +203,14 @@ function renderProductReport(){
  const purchases=db.purchases.reduce((sum,p)=>sum+(Number(p.total)||0),0);
  const productionCost=rows.reduce((sum,p)=>sum+p.productionCost,0);
  const revenue=rows.reduce((sum,p)=>sum+p.revenue,0);
- const profit=rows.reduce((sum,p)=>sum+p.profit,0);
+ const profit=rows.reduce((sum,p)=>sum+p.realizedProfit,0);
+ const unpaid=rows.reduce((sum,p)=>sum+p.unpaidRevenue,0);
  document.getElementById('reportPurchases').textContent=money(purchases);
  document.getElementById('reportProductionCost').textContent=money(productionCost);
  document.getElementById('reportRevenue').textContent=money(revenue);
+ document.getElementById('reportUnpaid').textContent=money(unpaid);
  const profitEl=document.getElementById('reportProfit');profitEl.textContent=money(profit);profitEl.className=profit<0?'negative':'success';
- document.getElementById('productReport').innerHTML=rows.length?rows.map(g=>`<div class="item"><div style="flex:1;min-width:0"><b>${esc(g.name)}</b><small>Fabriquées : ${g.made} · Vendues : ${g.sold} · Stock : ${g.stock}</small><small>Matières utilisées : ${money(g.materials)} · Main-d'œuvre : ${money(g.labor)} · Autres coûts : ${money(g.other)}</small><small>Coût fabrication : ${money(g.productionCost)} · Coût moyen/pièce : ${money(g.unitCost)}</small><small>Chiffre d'affaires : ${money(g.revenue)} · Frais de vente : ${money(g.saleExpenses)}</small>${g.unmatched?`<small class="negative">Attention : ${g.unmatched} pièce(s) vendue(s) au-delà des quantités fabriquées enregistrées pour ce produit.</small>`:''}</div><div class="amount">${money(g.profit)}<small class="${g.profit<0?'negative':'success'}">Bénéfice estimé</small></div></div>`).join(''):'<div class="empty">Aucune fabrication ou vente enregistrée pour le moment.</div>';
+ document.getElementById('productReport').innerHTML=rows.length?rows.map(g=>`<div class="item"><div style="flex:1;min-width:0"><b>${esc(g.name)}</b><small>Fabriquées : ${g.made} · Vendues : ${g.sold} · Stock : ${g.stock}</small><small>Matières utilisées : ${money(g.materials)} · Main-d'œuvre : ${money(g.labor)} · Autres coûts : ${money(g.other)}</small><small>Coût fabrication : ${money(g.productionCost)} · Coût moyen/pièce : ${money(g.unitCost)}</small><small>CA total : ${money(g.revenue)} · encaissé : ${money(g.paidRevenue)} · à recevoir : ${money(g.unpaidRevenue)}</small><small>Frais de vente payés : ${money(g.paidSaleExpenses)}</small>${g.unmatched? `<small class="negative">Attention : ${g.unmatched} pièce(s) vendue(s) au-delà des quantités fabriquées enregistrées pour ce produit.</small>`:''}</div><div class="amount">${money(g.realizedProfit)}<small class="${g.realizedProfit<0?'negative':'success'}">Bénéfice encaissé</small></div></div>`).join(''):'<div class="empty">Aucune fabrication ou vente enregistrée pour le moment.</div>';
 }
 function render(){
  const t=totals();
@@ -216,13 +221,14 @@ function render(){
  renderMaterialSummary();
  document.getElementById('purchaseList').innerHTML=list(db.purchases,p=>`<div class="item"><div><b>${esc(p.name)}</b><small>${esc(p.qty)} ${esc(p.unit)} · ${esc(p.date)}${p.note?' · '+esc(p.note):''}</small></div><div class="amount">${money(p.total)}<br><button class="btn small danger" onclick="delItem('purchases','${p.id}')">Supprimer</button></div></div>`,'Aucun achat enregistré.');
  document.getElementById('productionList').innerHTML=list(db.productions,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièces</b><small>${esc(p.date)} · matières ${money(p.materials)} · main-d'œuvre ${money(p.labor)} · autres ${money(p.other)}</small><small>Coût par pièce : ${money(totalCost(p)/p.qty)}</small></div><div class="amount">${money(totalCost(p))}<br><button class="btn small danger" onclick="delItem('productions','${p.id}')">Supprimer</button></div></div>`,'Aucune fabrication enregistrée.');
- document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
+ document.getElementById('saleList').innerHTML=list(db.sales,p=>`<div class="item"><div><b>${esc(p.name)} · ${p.qty} pièce(s)</b><small>${esc(p.date)} · ${money(p.price)} / pièce · frais ${money(p.expense||0)}</small><small class="${saleIsPaid(p)?'success':'negative'}">${saleIsPaid(p)?'Payée · incluse dans le bénéfice encaissé':'Non payée · exclue du bénéfice encaissé'}</small></div><div class="amount">${money(p.qty*p.price)}<br><button class="btn small secondary" onclick="toggleSalePaid('${p.id}')">${saleIsPaid(p)?'Marquer non payée':'Marquer payée'}</button><br><button class="btn small danger" onclick="delItem('sales','${p.id}')">Supprimer</button></div></div>`,'Aucune vente enregistrée.');
  const hist=[...db.purchases.map(x=>({...x,type:'Achat',amount:-x.total})),...db.productions.map(x=>({...x,type:'Fabrication',amount:-totalCost(x)})),...db.sales.map(x=>({...x,type:'Vente',amount:x.qty*x.price}))].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
  document.getElementById('allHistory').innerHTML=list(hist.slice(0,40),x=>`<div class="item"><div><b>${x.type} · ${esc(x.name)}</b><small>${esc(x.date)}</small></div><div class="amount ${x.amount<0?'negative':'success'}">${x.amount<0?'−':''}${money(Math.abs(x.amount))}</div></div>`,'Les opérations apparaîtront ici.');
  document.getElementById('budget').value=db.budget;document.getElementById('defaultPrice').value=db.defaultPrice;
  renderProductReport();
 }
 function delItem(group,id){if(confirm('Supprimer cette opération ?')){db[group]=db[group].filter(x=>x.id!==id);save()}}
+function toggleSalePaid(id){const sale=db.sales.find(x=>x.id===id);if(sale){sale.paid=!saleIsPaid(sale);save();}}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 document.getElementById('purchaseForm').addEventListener('submit',e=>{e.preventDefault();db.purchases.push({id:id(),name:document.getElementById('pName').value.trim(),qty:num('pQty'),unit:document.getElementById('pUnit').value,total:num('pTotal'),date:document.getElementById('pDate').value,note:document.getElementById('pNote').value.trim()});e.target.reset();document.getElementById('pQty').value=1;document.getElementById('pDate').value=today();save();showPage('achats')});
 function updateBatch(){const c=num('prodMaterials')+num('prodLabor')+num('prodOther'),q=Math.max(1,num('prodQty'));document.getElementById('liveBatchCost').textContent=money(c);document.getElementById('liveUnitCost').textContent=money(c/q)}
@@ -230,7 +236,7 @@ function updateBatch(){const c=num('prodMaterials')+num('prodLabor')+num('prodOt
 document.getElementById('productionForm').addEventListener('submit',e=>{e.preventDefault();db.productions.push({id:id(),name:document.getElementById('prodName').value.trim(),qty:num('prodQty'),date:document.getElementById('prodDate').value,materials:num('prodMaterials'),labor:num('prodLabor'),other:num('prodOther')});save();showPage('production')});
 function updateSale(){document.getElementById('liveSaleRevenue').textContent=money(num('sQty')*num('sPrice'))}
 ['sQty','sPrice'].forEach(id=>document.getElementById(id).addEventListener('input',updateSale));
-document.getElementById('saleForm').addEventListener('submit',e=>{e.preventDefault();const sold=db.sales.reduce((s,p)=>s+p.qty,0),made=db.productions.reduce((s,p)=>s+p.qty,0);if(num('sQty')>made-sold){if(!confirm('La quantité vendue dépasse le stock calculé. Enregistrer quand même ?'))return}db.sales.push({id:id(),name:document.getElementById('sProduct').value.trim(),qty:num('sQty'),price:num('sPrice'),date:document.getElementById('sDate').value,expense:num('sExpense')});save();showPage('ventes')});
+document.getElementById('saleForm').addEventListener('submit',e=>{e.preventDefault();const sold=db.sales.reduce((s,p)=>s+p.qty,0),made=db.productions.reduce((s,p)=>s+p.qty,0);if(num('sQty')>made-sold){if(!confirm('La quantité vendue dépasse le stock calculé. Enregistrer quand même ?'))return}db.sales.push({id:id(),name:document.getElementById('sProduct').value.trim(),qty:num('sQty'),price:num('sPrice'),date:document.getElementById('sDate').value,expense:num('sExpense'),paid:document.getElementById('sPaid').value==='yes'});e.target.reset();document.getElementById('sQty').value=1;document.getElementById('sPrice').value=db.defaultPrice;document.getElementById('sDate').value=today();document.getElementById('sExpense').value=0;document.getElementById('sPaid').value='yes';save();showPage('ventes')});
 document.getElementById('settingsForm').addEventListener('submit',e=>{e.preventDefault();db.budget=num('budget');db.defaultPrice=num('defaultPrice');document.getElementById('sPrice').value=db.defaultPrice;save();alert('Réglages enregistrés.')});
 document.getElementById('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sauvegarde-DNC-'+today()+'.json';a.click();URL.revokeObjectURL(url)});
 document.getElementById('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const imported=JSON.parse(await f.text());if(!imported||!Array.isArray(imported.purchases)||!Array.isArray(imported.productions)||!Array.isArray(imported.sales))throw Error('invalid');if(confirm('Remplacer les données actuelles par cette sauvegarde ?')){db={...blank(),...imported};save();alert('Sauvegarde importée.')}}catch(err){alert('Fichier de sauvegarde invalide.')}e.target.value=''});
